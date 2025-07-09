@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(CUSTOMER)
+  bookings  Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workshop {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  maxCapacity Int
+  bookings    Booking[]
+  timeSlots   TimeSlot[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime? // For Soft Deletion
+}
+
+model TimeSlot {
+  id             String    @id @default(cuid())
+  startTime      String    // e.g., "10:00 AM"
+  endTime        String    // e.g., "12:00 PM"
+  availableSpots Int
+  workshopId     String
+  workshop       Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  bookings       Booking[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  status     BookingStatus @default(PENDING)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshopId String
+  workshop   Workshop      @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  timeSlotId String
+  timeSlot   TimeSlot      @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?     // For Soft Deletion
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
