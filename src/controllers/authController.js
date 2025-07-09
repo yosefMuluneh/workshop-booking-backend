@@ -60,6 +60,7 @@ exports.login = async (req, res) => {
     if (error instanceof require('zod').ZodError) {
       return res.status(400).json({ message: 'Validation failed', errors: error.errors });
     }
+    console.log(error);
     res.status(500).json({ message: 'Server error', error });
   }
 };
