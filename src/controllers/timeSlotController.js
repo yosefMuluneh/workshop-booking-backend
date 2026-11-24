@@ -128,16 +128,13 @@ exports.deleteTimeSlot = async (req, res) => {
         throw error;
       }
 
-      const activeBookingCount = await tx.booking.count({
-        where: {
-          timeSlotId: id,
-          deletedAt: null,
-          status: { in: ACTIVE_BOOKING_STATUSES },
-        },
+      // Preserve booking history: deleting a slot cascades through its bookings.
+      const bookingCount = await tx.booking.count({
+        where: { timeSlotId: id },
       });
 
-      if (activeBookingCount > 0) {
-        const error = new Error('Cannot delete a time slot with active bookings. Cancel the bookings first.');
+      if (bookingCount > 0) {
+        const error = new Error('Cannot delete a time slot that has booking history.');
         error.statusCode = 409;
         throw error;
       }
