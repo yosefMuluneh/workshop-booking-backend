@@ -1,6 +1,7 @@
 // src/controllers/workshopController.js
 const { PrismaClient } = require('@prisma/client');
 const { createWorkshopSchema } = require('../validation/workshopValidation');
+const { getStartOfBusinessDay } = require('../utils/workshopDate');
 const prisma = new PrismaClient();
 
 // @desc    Create a new workshop (Admin only)
@@ -42,7 +43,7 @@ exports.createWorkshop = async (req, res) => {
     res.status(201).json(workshop);
   } catch (error) {
     if (error instanceof require('zod').ZodError) {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -57,7 +58,7 @@ exports.getPublicWorkshops = async (req, res) => {
     const workshops = await prisma.workshop.findMany({
       where: {
         deletedAt: null, // IMPORTANT: Filter out soft-deleted workshops
-        date: { gte: new Date() }, // Only show future workshops
+        date: { gte: getStartOfBusinessDay() }, // Include the full current business day
       },
       include: {
         timeSlots: {

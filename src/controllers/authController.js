@@ -16,28 +16,38 @@ exports.register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-
     const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        // In a real app, you'd have a separate flow for admin creation
-      },
+      data: { name, email, password: hashedPassword },
     });
 
-    res.status(201).json({ message: 'User created successfully', userId: user.id });
+    return res.status(201).json({
+      message: 'User created successfully',
+      userId: user.id,
+    });
   } catch (error) {
-    if (error instanceof require('zod').ZodError) {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
-    res.status(500).json({ message: 'Server error', error });
+
+    // A concurrent registration can pass the pre-check but lose the unique
+    // constraint race. Keep the response safe and deterministic.
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'An account with this email already exists.' });
+    }
+
+    console.error('Registration failed:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured.');
+      return res.status(500).json({ message: 'Authentication is temporarily unavailable.' });
+    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -55,12 +65,13 @@ exports.login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ token, userId: user.id, role: user.role });
+    return res.status(200).json({ token, userId: user.id, role: user.role });
   } catch (error) {
-    if (error instanceof require('zod').ZodError) {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
-    console.log(error);
-    res.status(500).json({ message: 'Server error', error });
+
+    console.error('Login failed:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
