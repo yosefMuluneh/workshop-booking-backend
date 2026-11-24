@@ -5,7 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 describe('Main API Endpoints', () => {
-  let adminToken, customerToken, testWorkshopId, testTimeSlotId;
+  let adminToken, customerToken, testWorkshopId, testTimeSlotId, testBookingId;
 
   // --- Setup: Create users and get tokens before all tests ---
   beforeAll(async () => {
@@ -128,6 +128,7 @@ describe('Main API Endpoints', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.body).toHaveProperty('bookingId');
+      testBookingId = res.body.bookingId;
     });
 
     it('should prevent a customer from booking the same slot twice', async () => {
@@ -142,6 +143,33 @@ describe('Main API Endpoints', () => {
       
       expect(res.statusCode).toEqual(409); // 409 Conflict
       expect(res.body.message).toBe('You have already booked this time slot.');
+    });
+
+    it('should restore capacity once when a customer cancels a booking', async () => {
+      const cancellation = await request(app)
+        .put(`/api/bookings/my-bookings/${testBookingId}/cancel`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({});
+
+      expect(cancellation.statusCode).toBe(200);
+      expect(cancellation.body.booking.status).toBe('CANCELED');
+
+      const slotAfterCancellation = await prisma.timeSlot.findUnique({
+        where: { id: testTimeSlotId },
+      });
+      expect(slotAfterCancellation.availableSpots).toBe(10);
+
+      const repeatedCancellation = await request(app)
+        .put(`/api/bookings/my-bookings/${testBookingId}/cancel`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({});
+
+      expect(repeatedCancellation.statusCode).toBe(409);
+
+      const slotAfterRepeatedCancellation = await prisma.timeSlot.findUnique({
+        where: { id: testTimeSlotId },
+      });
+      expect(slotAfterRepeatedCancellation.availableSpots).toBe(10);
     });
   });
 });
