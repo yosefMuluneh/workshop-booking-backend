@@ -116,6 +116,13 @@ describe('Main API Endpoints', () => {
       expect(publicList.statusCode).toBe(200);
       expect(publicList.body.some((workshop) => workshop.id === todayWorkshop.id)).toBe(true);
 
+      const dashboardStats = await request(app)
+        .get('/api/stats')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(dashboardStats.statusCode).toBe(200);
+      expect(dashboardStats.body.totalWorkshops).toBeGreaterThanOrEqual(1);
+
       const booking = await request(app)
         .post('/api/bookings')
         .set('Authorization', `Bearer ${customerToken}`)
