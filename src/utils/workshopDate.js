@@ -3,12 +3,17 @@
 const BUSINESS_TIME_ZONE = 'Africa/Addis_Ababa';
 const BUSINESS_UTC_OFFSET = '+03:00';
 
-const getBusinessDateKey = (date = new Date()) => new Intl.DateTimeFormat('en-CA', {
-  timeZone: BUSINESS_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-}).format(date);
+const getBusinessDateKey = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
 
 const getStartOfBusinessDay = (date = new Date()) => {
   const dateKey = getBusinessDateKey(date);
