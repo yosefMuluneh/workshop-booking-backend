@@ -1,6 +1,8 @@
 // src/controllers/bookingController.js
 const { PrismaClient } = require('@prisma/client');
 
+const { getStartOfBusinessDay } = require('../utils/workshopDate');
+
 const prisma = new PrismaClient();
 
 // @desc Get all bookings (Admin only) with filtering and pagination
@@ -67,7 +69,7 @@ exports.getDashboardStats = async (req, res) => {
     const [totalBookings, totalWorkshops, timeSlots, popularWorkshops] =
       await Promise.all([
         prisma.booking.count({ where: activeBookingWhere }),
-        prisma.workshop.count({ where: { deletedAt: null, date: { gte: new Date() } } }),
+        prisma.workshop.count({ where: { deletedAt: null, date: { gte: getStartOfBusinessDay() } } }),
         prisma.timeSlot.findMany({
           select: {
             availableSpots: true,
