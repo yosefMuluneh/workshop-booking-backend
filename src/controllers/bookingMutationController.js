@@ -184,6 +184,21 @@ exports.updateBookingStatus = async (req, res) => {
           data: { availableSpots: { increment: 1 } },
         });
       } else if (!wasActive && willBeActive) {
+        const duplicateBooking = await tx.booking.findFirst({
+          where: {
+            id: { not: id },
+            userId: booking.userId,
+            timeSlotId: booking.timeSlotId,
+            deletedAt: null,
+            status: { in: ['PENDING', 'CONFIRMED'] },
+          },
+          select: { id: true },
+        });
+
+        if (duplicateBooking) {
+          throw new BookingOperationError('This customer already has an active booking for this time slot.', 409);
+        }
+
         const capacityUpdate = await tx.timeSlot.updateMany({
           where: {
             id: booking.timeSlotId,
