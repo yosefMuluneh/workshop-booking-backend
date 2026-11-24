@@ -64,12 +64,16 @@ exports.getDashboardStats = async (req, res) => {
       status: { in: ['PENDING', 'CONFIRMED'] },
     };
 
-    const [totalBookings, totalWorkshops, capacityAggregation, workshopCapacityAggregation, popularWorkshops] =
+    const [totalBookings, totalWorkshops, timeSlots, popularWorkshops] =
       await Promise.all([
         prisma.booking.count({ where: activeBookingWhere }),
         prisma.workshop.count({ where: { deletedAt: null, date: { gte: new Date() } } }),
-        prisma.timeSlot.aggregate({ _sum: { availableSpots: true } }),
-        prisma.workshop.aggregate({ _sum: { maxCapacity: true } }),
+        prisma.timeSlot.findMany({
+          select: {
+            availableSpots: true,
+            workshop: { select: { maxCapacity: true } },
+          },
+        }),
         prisma.booking.groupBy({
           by: ['workshopId'],
           where: activeBookingWhere,
@@ -79,8 +83,8 @@ exports.getDashboardStats = async (req, res) => {
         }),
       ]);
 
-    const totalInitialSpots = workshopCapacityAggregation._sum.maxCapacity || 0;
-    const totalAvailableSpots = capacityAggregation._sum.availableSpots || 0;
+    const totalInitialSpots = timeSlots.reduce((total, slot) => total + slot.workshop.maxCapacity, 0);
+    const totalAvailableSpots = timeSlots.reduce((total, slot) => total + slot.availableSpots, 0);
     const slotsFilled = Math.max(0, totalInitialSpots - totalAvailableSpots);
     const slotsFilledPercentage = totalInitialSpots > 0
       ? (slotsFilled / totalInitialSpots) * 100
