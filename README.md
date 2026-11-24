@@ -68,14 +68,9 @@ This repository contains the backend server for the Workshop Booking System. It 
     ```
 
 3.  **Set up environment variables:**
-    Create a `.env` file in the project root and populate it with your configuration. Use the `.env.example` as a template:
+    Copy `.env.example` to `.env` and replace the placeholder values. Use a local PostgreSQL database dedicated to this project. For automated tests, create a separate test database and point `DATABASE_URL` to it before running the suite; the integration tests create and delete test records.
 
-    ```env
-    # .env.example
-    DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
-    JWT_SECRET="YOUR_SUPER_SECRET_KEY_THAT_IS_LONG_AND_RANDOM"
-    PORT=5000
-    ```
+    The backend allows `http://localhost:3000` and `http://localhost:5173` by default. Set `CORS_ORIGINS` to a comma-separated list of exact frontend origins when deploying (for example, your customer-site and admin-panel domains).
 
 4.  **Apply database migrations:**
     This command will create all the necessary tables in your database based on the Prisma schema.
@@ -83,8 +78,8 @@ This repository contains the backend server for the Workshop Booking System. It 
     npx prisma migrate dev
     ```
 
-5.  **(Recommended) Seed the database:**
-    This script will clear the database and populate it with initial sample data (admin user, workshops, etc.) for testing and development.
+5.  **(Optional) Seed the database:**
+    This script clears existing application data and populates the database with sample data (admin user, workshops, etc.). Run it only against a disposable local database, never a database containing data you need.
     ```bash
     npx prisma db seed
     ```
