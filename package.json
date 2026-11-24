@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest --testTimeout=10000 --detectOpenHandles"
+    "test": "jest --testTimeout=10000 --detectOpenHandles",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
