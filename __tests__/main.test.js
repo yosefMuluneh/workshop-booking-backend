@@ -91,6 +91,78 @@ describe('Main API Endpoints', () => {
     });
   });
 
+  describe('Workshop calendar-day availability', () => {
+    const { getStartOfBusinessDay } = require('../src/utils/workshopDate');
+
+    it('keeps a workshop bookable throughout its calendar day', async () => {
+      const todayWorkshop = await prisma.workshop.create({
+        data: {
+          title: 'Test Workshop Today Availability',
+          description: 'Regression test for same-day workshop availability.',
+          date: getStartOfBusinessDay(),
+          maxCapacity: 2,
+          timeSlots: {
+            create: {
+              startTime: '09:00 AM',
+              endTime: '10:00 AM',
+              availableSpots: 2,
+            },
+          },
+        },
+        include: { timeSlots: true },
+      });
+
+      const publicList = await request(app).get('/api/workshops');
+      expect(publicList.statusCode).toBe(200);
+      expect(publicList.body.some((workshop) => workshop.id === todayWorkshop.id)).toBe(true);
+
+      const booking = await request(app)
+        .post('/api/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          workshopId: todayWorkshop.id,
+          timeSlotId: todayWorkshop.timeSlots[0].id,
+        });
+
+      expect(booking.statusCode).toBe(201);
+    });
+
+    it('hides past workshops and rejects booking them', async () => {
+      const yesterday = new Date(getStartOfBusinessDay().getTime() - 24 * 60 * 60 * 1000);
+      const pastWorkshop = await prisma.workshop.create({
+        data: {
+          title: 'Test Workshop Past Availability',
+          description: 'Regression test for past workshop availability.',
+          date: yesterday,
+          maxCapacity: 2,
+          timeSlots: {
+            create: {
+              startTime: '11:00 AM',
+              endTime: '12:00 PM',
+              availableSpots: 2,
+            },
+          },
+        },
+        include: { timeSlots: true },
+      });
+
+      const publicList = await request(app).get('/api/workshops');
+      expect(publicList.statusCode).toBe(200);
+      expect(publicList.body.some((workshop) => workshop.id === pastWorkshop.id)).toBe(false);
+
+      const booking = await request(app)
+        .post('/api/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          workshopId: pastWorkshop.id,
+          timeSlotId: pastWorkshop.timeSlots[0].id,
+        });
+
+      expect(booking.statusCode).toBe(400);
+      expect(booking.body.message).toBe('This workshop is not available for booking.');
+    });
+  });
+
   // Concurrent requests must not reserve the same final spot more than once.
   it('should preserve capacity when duplicate booking requests arrive concurrently', async () => {
     const singleSpotSlot = await prisma.timeSlot.create({
