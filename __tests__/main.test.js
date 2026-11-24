@@ -91,6 +91,30 @@ describe('Main API Endpoints', () => {
     });
   });
 
+  // Concurrent requests must not reserve the same final spot more than once.
+  it('should preserve capacity when duplicate booking requests arrive concurrently', async () => {
+    const singleSpotSlot = await prisma.timeSlot.create({
+      data: {
+        startTime: '02:00 PM',
+        endTime: '03:00 PM',
+        availableSpots: 1,
+        workshopId: testWorkshopId,
+      },
+    });
+
+    const payload = { workshopId: testWorkshopId, timeSlotId: singleSpotSlot.id };
+    const responses = await Promise.all([
+      request(app).post('/api/bookings').set('Authorization', `Bearer ${customerToken}`).send(payload),
+      request(app).post('/api/bookings').set('Authorization', `Bearer ${customerToken}`).send(payload),
+    ]);
+
+    expect(responses.filter((response) => response.statusCode === 201)).toHaveLength(1);
+    expect(responses.filter((response) => response.statusCode === 409)).toHaveLength(1);
+
+    const finalSlot = await prisma.timeSlot.findUnique({ where: { id: singleSpotSlot.id } });
+    expect(finalSlot.availableSpots).toBe(0);
+  });
+
   // --- TEST SUITE 3: Booking Creation (Customer) ---
   describe('POST /api/bookings', () => {
     it('should allow a logged-in customer to book a workshop', async () => {
