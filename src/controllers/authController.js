@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
 
     // A concurrent registration can pass the pre-check but lose the unique
@@ -68,7 +68,7 @@ exports.login = async (req, res) => {
     return res.status(200).json({ token, userId: user.id, role: user.role });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
 
     console.error('Login failed:', error);
