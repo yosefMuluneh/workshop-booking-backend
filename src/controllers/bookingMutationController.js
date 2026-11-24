@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { createBookingSchema, updateBookingStatusSchema } = require('../validation/bookingValidation');
+const { isPastWorkshopDate } = require('../utils/workshopDate');
 
 const prisma = new PrismaClient();
 
@@ -36,7 +37,7 @@ exports.createBooking = async (req, res) => {
         select: { date: true, deletedAt: true },
       });
 
-      if (!workshop || workshop.deletedAt || workshop.date < new Date()) {
+      if (!workshop || workshop.deletedAt || isPastWorkshopDate(workshop.date)) {
         throw new BookingOperationError('This workshop is not available for booking.', 400);
       }
 
