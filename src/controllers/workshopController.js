@@ -42,7 +42,7 @@ exports.createWorkshop = async (req, res) => {
     res.status(201).json(workshop);
   } catch (error) {
     if (error instanceof require('zod').ZodError) {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
     console.error(error);
     res.status(500).json({ message: 'Server error' });
