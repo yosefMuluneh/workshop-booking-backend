@@ -81,7 +81,7 @@ exports.createBooking = async (req, res) => {
     });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
     if (error instanceof BookingOperationError) {
       return res.status(error.statusCode).json({ message: error.message });
@@ -232,7 +232,7 @@ exports.updateBookingStatus = async (req, res) => {
     });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(400).json({ message: 'Validation failed', errors: error.issues });
     }
     if (error instanceof BookingOperationError) {
       return res.status(error.statusCode).json({ message: error.message });
